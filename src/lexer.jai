@@ -2,6 +2,7 @@
 
 Token_Kind :: enum {
     NUMBER;
+    OPERATOR;
     EOF;
     ERROR;
 }
@@ -10,6 +11,7 @@ Token :: struct {
     kind: Token_Kind;
     using value: union {
         string_value: string;
+        char_value:   u8;
     } = ---;
 }
 
@@ -35,16 +37,23 @@ lex_next_token :: (using lexer: *Lexer) -> Token {
     if content.count - idx == 0 return .{kind = .EOF};
 
     chr := content[idx];
-    if is_digit(chr) then return lex_number(lexer);
 
-    chrs := u8.[chr];
-    return .{kind = .ERROR, string_value = sprint("Unknown token: %", cast(string) chrs)};
+    if is_digit(chr) {
+        return lex_number(lexer);
+    }
+    if is_operator {
+        advance_lexer(lexer);
+        return .{kind = .OPERATOR, char_value = chr};
+    }
+
+    return .{kind = .ERROR, string_value = sprint("Unknown token: %", cast(string) u8.[chr])};
 }
 
 print_token :: (using token: Token) {
     print("%", kind);
     if kind == {
-        case .NUMBER; print(": '%'", string_value);
+        case .NUMBER; print(": %", string_value);
+        case .OPERATOR; print(": %", cast(string) u8.[char_value]);
     }
 }
 
@@ -55,6 +64,13 @@ is_space :: (chr: u8) -> bool {
         || chr == #char "\n"
         || chr == #char "\t"
         || chr == #char "\r";
+}
+
+is_operator :: (chr: u8) -> bool {
+    return chr == #char "+"
+        || chr == #char "-"
+        || chr == #char "/"
+        || chr == #char "*";
 }
 
 is_digit :: (chr: u8) -> bool {

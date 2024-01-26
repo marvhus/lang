@@ -1,5 +1,5 @@
 main :: () {
-    test := "1 2 3 b";
+    test := "1 + 2 - 3 * 4 / 5";
     lexer := new_lexer(test);
     token := lex_next_token(*lexer);
     while token.kind != .EOF && token.kind != .ERROR {
