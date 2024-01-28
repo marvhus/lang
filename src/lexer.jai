@@ -10,7 +10,10 @@ Token_Kind :: enum {
 Token :: struct {
     kind: Token_Kind;
     using value: union {
+        // @NOTE: only used for error messages for now.
         string_value: string;
+        // @NOTE: figuring out if the number is negative is figured out at a later stage
+        number_value: u64; 
         char_value:   u8;
     } = ---;
 }
@@ -118,6 +121,10 @@ lex_number :: (using lexer: *Lexer) -> Token {
         advance_lexer(lexer);
     }
 
-    token.string_value = builder_to_string(*builder);
+    number_text := builder_to_string(*builder);
+    number, success := string_to_int(number_text, 10, u64);
+    assert(success, "Something has gone terribly wrong!");
+
+    token.number_value = number;
     return token;
 }
