@@ -3,11 +3,13 @@
 AST_Node_Kind :: enum {
     BINARY_OPERATOR;
     LEAF_NUMBER;
+    LEAF_IDENT;
 }
 
 AST_Node :: struct {
     kind: AST_Node_Kind;
     using value: union {
+        string_value: string;
         number_value: u64;
         char_value: u8;
     } = ---;
@@ -37,6 +39,7 @@ print_node :: (using node: *AST_Node) {
     if kind == {
         case .BINARY_OPERATOR; print(": %", cast(string) u8.[char_value]);
         case .LEAF_NUMBER; print(": %", number_value);
+        case .LEAF_IDENT; print(": %", string_value);
     }
 }
 
@@ -59,6 +62,12 @@ new_leaf_number :: (value: u64) -> *AST_Node {
     return node;
 }
 
+new_leaf_ident :: (value: string) -> *AST_Node {
+    node := new_ast_node(.LEAF_IDENT);
+    node.string_value = value;
+    return node;
+}
+
 new_binary :: (left: *AST_Node, op: u8, right: *AST_Node) -> *AST_Node {
     node := new_ast_node(.BINARY_OPERATOR);
     node.char_value = op;
@@ -72,6 +81,7 @@ parse_leaf :: (lexer: *Lexer) -> *AST_Node {
     next := lex_next_token(lexer);
     if next.kind == {
         case .NUMBER; return new_leaf_number(next.number_value);
+        case .IDENT; return new_leaf_ident(next.string_value);
         case .ERROR; print("Error at line % column % :: %\n",
                            lexer.line,
                            lexer.column,

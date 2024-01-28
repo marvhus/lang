@@ -3,6 +3,7 @@
 Token_Kind :: enum {
     NUMBER;
     OPERATOR;
+    IDENT;
     EOF;
     ERROR;
 }
@@ -10,7 +11,6 @@ Token_Kind :: enum {
 Token :: struct {
     kind: Token_Kind;
     using value: union {
-        // @NOTE: only used for error messages for now.
         string_value: string;
         // @NOTE: figuring out if the number is negative is figured out at a later stage
         number_value: u64; 
@@ -48,6 +48,9 @@ lex_next_token :: (using lexer: *Lexer) -> Token {
         advance_lexer(lexer);
         return .{kind = .OPERATOR, char_value = chr};
     }
+    if is_ident_start(chr) {
+        return lex_ident(lexer);
+    }
 
     return .{kind = .ERROR, string_value = sprint("Unknown token: %", cast(string) u8.[chr])};
 }
@@ -79,6 +82,17 @@ is_operator :: (chr: u8) -> bool {
 is_digit :: (chr: u8) -> bool {
     return (chr >= #char "0")
         && (chr <= #char "9");
+}
+
+is_ident_start :: (chr: u8) -> bool {
+    return ((chr >= #char "a") && (chr <= #char "z"))
+        || ((chr >= #char "A") && (chr <= #char "Z"));
+}
+
+is_ident :: (chr: u8) -> bool {
+    return is_ident_start(chr)
+        || is_digit(chr)
+        || chr == #char "_";
 }
 
 advance_lexer :: (using lexer: *Lexer) {
@@ -126,5 +140,23 @@ lex_number :: (using lexer: *Lexer) -> Token {
     assert(success, "Something has gone terribly wrong!");
 
     token.number_value = number;
+    return token;
+}
+
+lex_ident :: (using lexer: *Lexer) -> Token {
+    token := Token.{kind = .IDENT};
+    builder: String_Builder;
+    init_string_builder(*builder);
+
+    while content.count - idx > 0 {
+        chr := content[idx];
+        if !is_ident(chr) break;
+
+        append(*builder, chr);
+
+        advance_lexer(lexer);
+    }
+
+    token.string_value = builder_to_string(*builder);
     return token;
 }
