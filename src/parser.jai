@@ -67,10 +67,16 @@ new_binary :: (left: *AST_Node, op: u8, right: *AST_Node) -> *AST_Node {
     return node;
 }
 
+
 parse_leaf :: (lexer: *Lexer) -> *AST_Node {
     next := lex_next_token(lexer);
     if next.kind == {
         case .NUMBER; return new_leaf_number(next.number_value);
+        case .ERROR; print("Error at line % column % :: %\n",
+                           lexer.line,
+                           lexer.column,
+                           next.string_value
+                          );
     }
     return null;
 }
@@ -80,6 +86,11 @@ parse_expression :: (lexer: *Lexer) -> *AST_Node {
     next := lex_next_token(lexer);
     if next.kind == {
         case .OPERATOR; return new_binary(left, next.char_value, parse_expression(lexer));
+        case .ERROR; print("Error at line % column % :: %\n",
+                           lexer.line,
+                           lexer.column,
+                           next.string_value
+                          );
     }
     return left;
 }

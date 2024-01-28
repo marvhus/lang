@@ -44,7 +44,7 @@ lex_next_token :: (using lexer: *Lexer) -> Token {
     if is_digit(chr) {
         return lex_number(lexer);
     }
-    if is_operator {
+    if is_operator(chr) {
         advance_lexer(lexer);
         return .{kind = .OPERATOR, char_value = chr};
     }
