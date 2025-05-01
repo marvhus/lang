@@ -8,14 +8,8 @@ DONE;
 main :: () {
     print("Lexing:\n%\n", content);
 
-    lexer: Lexer;
-    init(*lexer, content);
-
-    while true {
-        tok := next_token(*lexer);
-        print("Token: %  `%`\n", tok, string.{data = lexer.content.data + tok.start, count = tok.length});
-        if tok.kind == .EOF break;
-    }
+    tokens := tokenize(content);
+    dump(tokens);
 }
 
 #load "lexer.jai";

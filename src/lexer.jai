@@ -1,12 +1,3 @@
-Lexer :: struct {
-    content: string;
-    cursor: int;
-}
-init :: (lexer: *Lexer, content: string) {
-    lexer.content = content;
-    lexer.cursor = 0;
-}
-
 Token :: struct {
     Kind :: enum {
         EOF;
@@ -34,11 +25,78 @@ Token :: struct {
     }
 
     kind:   Kind;
-    start:  int;
+    offset: int;
     length: int;
 }
 
+tokenize :: (text: string) -> [..]Token {
+    lexer := Lexer.{
+        content = text,
+        cursor  = 0,
+    };
+
+    tokens: [..]Token;
+    while true {
+        tok := next_token(*lexer);
+        array_add(*tokens, tok);
+
+        if tok.kind == .EOF then break;
+    }
+
+    return tokens;
+}
+
+dump :: (tokens: []Token) {
+    push_context,defer_pop;
+    context.print_style.default_format_struct.use_long_form_if_more_than_this_many_members = -1;
+
+    print("Token.[\n");
+    for tok: tokenize(content) {
+        slice := string.{
+            data  = content.data + tok.offset,
+            count = tok.length,
+        };
+
+        print("\t// `%`\n", slice);
+        print("\t.%,\n", tok);
+    }
+    print("];\n");
+}
+
+#scope_file
+
+Lexer :: struct {
+    content: string;
+    cursor: int;
+}
+
+peek :: (using lexer: Lexer, offset: int = 0) -> u8 {
+    if content.count - 1 - cursor < offset {
+        return 0;
+    }
+    return content[cursor + offset];
+}
+next :: (using lexer: *Lexer, offset: int = 1) -> u8 {
+    if content.count - cursor < offset{
+        return 0;
+    }
+
+    val := peek(lexer, offset);
+    cursor += offset;
+    return val;
+}
+
 next_token :: (lexer: *Lexer) -> Token {
+    make_token :: (lexer: *Lexer, kind: Token.Kind, length: int) -> Token {
+        start := lexer.cursor;
+        next(lexer, length);
+        return Token.{
+            kind   = kind,
+            offset  = start,
+            length = length,
+        };
+    }
+
     while true { // Skip whitespace
         char := peek(lexer);
         if char >  #char " " || char == 0 then break;
@@ -50,7 +108,7 @@ next_token :: (lexer: *Lexer) -> Token {
 
     if char == 0 then return Token.{ // Check EOF
         kind = .EOF,
-        start = lexer.cursor,
+        offset = lexer.cursor,
         length = 0,
     };
 
@@ -85,7 +143,7 @@ next_token :: (lexer: *Lexer) -> Token {
         }
         return Token.{
             kind   = .INT_LITERAL,
-            start  = start,
+            offset  = start,
             length = lexer.cursor - start,
         };
     }
@@ -106,7 +164,7 @@ next_token :: (lexer: *Lexer) -> Token {
         }
         return Token.{
             kind   = .IDENT,
-            start  = start,
+            offset  = start,
             length = lexer.cursor - start,
         };
     }
@@ -114,32 +172,4 @@ next_token :: (lexer: *Lexer) -> Token {
     print("Unknown token at % with char %\n", lexer.cursor, peek(lexer));
     exit(1);
     return Token.{kind = .EOF};
-}
-
-#scope_file
-
-make_token :: (lexer: *Lexer, kind: Token.Kind, length: int) -> Token {
-    start := lexer.cursor;
-    next(lexer, length);
-    return Token.{
-        kind   = kind,
-        start  = start,
-        length = length,
-    };
-}
-
-peek :: (using lexer: Lexer, offset: int = 0) -> u8 {
-    if content.count - 1 - cursor < offset {
-        return 0;
-    }
-    return content[cursor + offset];
-}
-next :: (using lexer: *Lexer, offset: int = 1) -> u8 {
-    if content.count - cursor < offset{
-        return 0;
-    }
-
-    val := peek(lexer, offset);
-    cursor += offset;
-    return val;
 }

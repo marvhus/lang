@@ -16,21 +16,40 @@ Lexing:
 ( ) { }
 hello_w0rld 123
 
-Token: {SET, 0, 2}  `<-`
-Token: {ADD, 3, 1}  `+`
-Token: {SUB, 5, 1}  `-`
-Token: {MUL, 7, 1}  `*`
-Token: {DIV, 9, 1}  `/`
-Token: {EQUAL, 11, 1}  `=`
-Token: {LESS, 13, 1}  `<`
-Token: {LESS_OR_EQUAL, 15, 2}  `<=`
-Token: {GREATER, 18, 1}  `>`
-Token: {GREATER_OR_EQUAL, 20, 2}  `>=`
-Token: {L_PAREN, 23, 1}  `(`
-Token: {R_PAREN, 25, 1}  `)`
-Token: {L_BRACE, 27, 1}  `{`
-Token: {R_BRACE, 29, 1}  `}`
-Token: {IDENT, 31, 11}  `hello_w0rld`
-Token: {INT_LITERAL, 43, 3}  `123`
-Token: {EOF, 47, 0}  ``
+Token.[
+        // `<-`
+        .{kind = SET; offset = 0; length = 2; },
+        // `+`
+        .{kind = ADD; offset = 3; length = 1; },
+        // `-`
+        .{kind = SUB; offset = 5; length = 1; },
+        // `*`
+        .{kind = MUL; offset = 7; length = 1; },
+        // `/`
+        .{kind = DIV; offset = 9; length = 1; },
+        // `=`
+        .{kind = EQUAL; offset = 11; length = 1; },
+        // `<`
+        .{kind = LESS; offset = 13; length = 1; },
+        // `<=`
+        .{kind = LESS_OR_EQUAL; offset = 15; length = 2; },
+        // `>`
+        .{kind = GREATER; offset = 18; length = 1; },
+        // `>=`
+        .{kind = GREATER_OR_EQUAL; offset = 20; length = 2; },
+        // `(`
+        .{kind = L_PAREN; offset = 23; length = 1; },
+        // `)`
+        .{kind = R_PAREN; offset = 25; length = 1; },
+        // `{`
+        .{kind = L_BRACE; offset = 27; length = 1; },
+        // `}`
+        .{kind = R_BRACE; offset = 29; length = 1; },
+        // `hello_w0rld`
+        .{kind = IDENT; offset = 31; length = 11; },
+        // `123`
+        .{kind = INT_LITERAL; offset = 43; length = 3; },
+        // ``
+        .{kind = EOF; offset = 47; length = 0; },
+];
 ```
