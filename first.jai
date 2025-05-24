@@ -34,7 +34,7 @@ run :: () -> success: bool {
 build :: () -> success: bool {
     print("==== Building ====\n");
 
-    workspace := compiler_create_workspace("Dani Jam 2025");
+    workspace := compiler_create_workspace("Language");
     if !workspace {
         log_error("Failed to create workspace.\n");
         return false;

@@ -7,6 +7,7 @@ AST_Node :: struct {
         ASSIGN;
         CALL;
         EXPRESSION;
+        VALUE;
     };
 
     kind: Kind;
@@ -14,35 +15,36 @@ AST_Node :: struct {
     length: int;
 }
 
-AST_Root_Node :: struct {
+AST_Root :: struct {
     using #as base: AST_Node;
     statements: [..]*AST_Node;
 }
 
-AST_Procedure_Node :: struct {
+AST_Procedure :: struct {
     using #as base: AST_Node;
     name: string;
-    block: *AST_Block_Node;
+    block: *AST_Block;
 }
 
-AST_Block_Node :: struct {
+AST_Block :: struct {
     using #as base: AST_Node;
     statements: [..]*AST_Node;
 }
 
-AST_Assign_Node :: struct {
+AST_Assign :: struct {
     using #as base: AST_Node;
     name: string;
-    value: *AST_Expression_Node;
+    define: bool;
+    value: *AST_Expression;
 }
 
-AST_Call_Node :: struct {
+AST_Call :: struct {
     using #as base: AST_Node;
     name: string;
-    parameters: [..]*AST_Expression_Node;
+    parameters: [..]*AST_Expression;
 }
 
-AST_Expression_Node :: struct {
+AST_Expression :: struct {
     Thing :: enum { // TODO(mvh): Name this better?
         INVALID :: 0;
         VALUE;
@@ -53,18 +55,18 @@ AST_Expression_Node :: struct {
     next: *AST_Node;
 }
 
-AST_Value_Node :: struct {
+AST_Value :: struct {
     using #as base: AST_Node;
     number: int;
 }
 
-parse :: (tokens: []Token, content: string) -> root_node: *AST_Root_Node {
+parse :: (tokens: []Token, content: string) -> root_node: *AST_Root {
     parser := Parser.{
         tokens = tokens,
         cursor = 0,
         content = content,
     };
-    root := New(AST_Root_Node);
+    root := New(AST_Root);
     root.kind = .ROOT;
 
     statements: [..]*AST_Node;
@@ -117,6 +119,17 @@ parse_statement :: (using parser: *Parser, is_root: bool) -> success: bool, node
     if start.kind == {
       case .KEYWORD_PROC;
         return true, parse_procedure(parser);
+      case .IDENTIFIER;
+        if peek(parser, 1).kind == {
+          case .L_PAREN;
+            return true, parse_call(parser);
+          case .COLON;
+            return true, parse_assign(parser);
+          case;
+            log_error("Syntax error.  Unexpected token after identifier.\n");
+            exit(1);
+            return false, null;
+        }
       case .EOF;
         return false, null;
       case;
@@ -126,9 +139,15 @@ parse_statement :: (using parser: *Parser, is_root: bool) -> success: bool, node
     }
 }
 
-parse_procedure :: (using parser: *Parser) -> *AST_Procedure_Node {
+parse_procedure :: (using parser: *Parser) -> *AST_Procedure {
+    procedure := New(AST_Procedure);
+    procedure.kind = .PROCEDURE;
+
     expect(parser, .KEYWORD_PROC);
-    name := expect(parser, .IDENTIFIER);
+    { // Procedure name
+        name := expect(parser, .IDENTIFIER);
+        procedure.name = get_string_slice(name, content);
+    }
     expect(parser, .L_PAREN);
 
     // TODO(mvh): handle parameters
@@ -137,17 +156,109 @@ parse_procedure :: (using parser: *Parser) -> *AST_Procedure_Node {
 
     // TODO(mvh): handle returns
 
-    expect(parser, .L_BRACE);
-
-    // TODO(mvh): parse statements in procedure
-    while next(parser).kind != .R_BRACE {}
-
-    expect(parser, .R_BRACE);
-
-
-    procedure := New(AST_Procedure_Node);
-    procedure.kind = .PROCEDURE;
-    procedure.name = string.{data = content.data + name.offset, count = name.length};
+    { // Procedure block
+        if peek(parser).kind != .L_BRACE {
+            log_error("Syntax error.  Expected body of procedure to be block.\n");
+            exit(1);
+        }
+        procedure.block = parse_block(parser);
+    }
 
     return procedure;
+}
+
+parse_block :: (using parser: *Parser) -> *AST_Block {
+    block := New(AST_Block);
+    block.kind = .BLOCK;
+
+    expect(parser, .L_BRACE);
+
+    statements: [..]*AST_Node;
+    while peek(parser).kind != .R_BRACE {
+        success, node := parse_statement(parser, is_root = false);
+        if !success {
+            log_error("Unexpected end to block.  Got %\n", peek(parser).kind);
+            exit(1);
+        }
+        array_add(*statements, node);
+    }
+    block.statements = statements;
+    expect(parser, .R_BRACE);
+
+    return block;
+}
+
+parse_call :: (using parser: *Parser) -> *AST_Call {
+    call := New(AST_Call);
+    call.kind = .CALL;
+
+    { // Name
+        name := expect(parser, .IDENTIFIER);
+        call.name = get_string_slice(name, content);
+    }
+    expect(parser, .L_PAREN);
+
+    // TODO(mvh): Handle more than one parameter
+    parameters: [..]*AST_Expression;
+    array_add(*parameters, parse_expression(parser));
+    call.parameters = parameters;
+
+    expect(parser, .R_PAREN);
+    expect(parser, .SEMICOLON);
+
+    return call;
+}
+
+parse_assign :: (using parser: *Parser) -> *AST_Assign {
+    assign := New(AST_Assign);
+    assign.kind = .ASSIGN;
+
+    { // Name
+        name := expect(parser, .IDENTIFIER);
+        assign.name = get_string_slice(name, content);
+    }
+
+    if peek(parser).kind == .COLON {
+        assign.define = true;
+        next(parser);
+        // TODO(mvh): Handle types;
+    }
+
+    expect(parser, .EQUAL);
+
+    assign.value = parse_expression(parser);
+
+    expect(parser, .SEMICOLON);
+
+    return assign;
+}
+
+// TODO(mvh): Propper expression parsing.
+parse_expression :: (using parser: *Parser) -> *AST_Expression {
+    expression := New(AST_Expression);
+    expression.kind = .EXPRESSION;
+
+    token := peek(parser);
+    if token.kind == {
+      case .INTEGER_LITERAL;
+        expression.thing = .VALUE;
+        expression.next = parse_value(parser);
+      case;
+        log_error("Syntax error.  Unexpected token in expression %\n", token.kind);
+        exit(1);
+    }
+
+    return expression;
+}
+
+// TODO(mvh): Handle more than just number.  Maybe rename AST_Value to AST_Leaf or something like it?
+parse_value :: (using parser: *Parser) -> *AST_Value {
+    value := New(AST_Value);
+    value.kind = .VALUE;
+
+    integer := expect(parser, .INTEGER_LITERAL);
+    slice := get_string_slice(integer, content);
+    value.number = parse_int(*slice, int);
+
+    return value;
 }

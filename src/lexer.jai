@@ -72,6 +72,13 @@ dump :: (tokens: []Token, content: string) {
     print("];\n");
 }
 
+get_string_slice :: (token: Token, content: string) -> string {
+    return string.{
+        data  = content.data + token.offset,
+        count = token.length,
+    };
+}
+
 #scope_file
 
 Lexer :: struct {
