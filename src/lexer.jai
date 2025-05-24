@@ -26,6 +26,8 @@ Token :: struct {
         IDENTIFIER;
         INTEGER_LITERAL;
         STRING_LITERAL;
+
+        KEYWORD_PROC;
     }
 
     kind:   Kind;
@@ -170,10 +172,21 @@ next_token :: (lexer: *Lexer) -> Token {
             }
             break;
         }
+
+        slice := string.{
+            data  = lexer.content.data + start,
+            count = lexer.cursor - start,
+        };
+        kind := Token.Kind.IDENTIFIER;
+
+        if slice == {
+          case "proc"; kind = .KEYWORD_PROC;
+        }
+
         return Token.{
-            kind   = .IDENTIFIER,
+            kind   = kind,
             offset = start,
-            length = lexer.cursor - start,
+            length = slice.count,
         };
     }
 

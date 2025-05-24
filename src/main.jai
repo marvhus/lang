@@ -5,6 +5,7 @@ CONTENT :: #string DONE
 hello_w0rld 123
 "hello world"
 : ;
+proc
 DONE;
 
 main :: () {
