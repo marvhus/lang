@@ -1,6 +1,6 @@
 Token :: struct {
     Kind :: enum {
-        EOF;
+        EOF :: 0;
 
         SET;
         ADD;
@@ -34,6 +34,7 @@ Token :: struct {
     offset: int;
     length: int;
 }
+ZERO_TOKEN :: Token.{};
 
 tokenize :: (text: string) -> [..]Token {
     lexer := Lexer.{
