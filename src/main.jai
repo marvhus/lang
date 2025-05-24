@@ -4,6 +4,7 @@ CONTENT :: #string DONE
 ( ) { }
 hello_w0rld 123
 "hello world"
+: ;
 DONE;
 
 main :: () {

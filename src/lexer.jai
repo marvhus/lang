@@ -14,6 +14,9 @@ Token :: struct {
         LESS;
         LESS_OR_EQUAL;
 
+        COLON;
+        SEMICOLON;
+
         L_PAREN;
         R_PAREN;
 
@@ -116,15 +119,17 @@ next_token :: (lexer: *Lexer) -> Token {
     };
 
     if char == { // Symbols
-        case #char "+"; return make_token(lexer, .ADD,     1);
-        case #char "-"; return make_token(lexer, .SUB,     1);
-        case #char "*"; return make_token(lexer, .MUL,     1);
-        case #char "/"; return make_token(lexer, .DIV,     1);
-        case #char "("; return make_token(lexer, .L_PAREN, 1);
-        case #char ")"; return make_token(lexer, .R_PAREN, 1);
-        case #char "{"; return make_token(lexer, .L_BRACE, 1);
-        case #char "}"; return make_token(lexer, .R_BRACE, 1);
-        case #char "="; return make_token(lexer, .EQUAL,   1);
+        case #char "+"; return make_token(lexer, .ADD,       1);
+        case #char "-"; return make_token(lexer, .SUB,       1);
+        case #char "*"; return make_token(lexer, .MUL,       1);
+        case #char "/"; return make_token(lexer, .DIV,       1);
+        case #char ":"; return make_token(lexer, .COLON,     1);
+        case #char ";"; return make_token(lexer, .SEMICOLON, 1);
+        case #char "("; return make_token(lexer, .L_PAREN,   1);
+        case #char ")"; return make_token(lexer, .R_PAREN,   1);
+        case #char "{"; return make_token(lexer, .L_BRACE,   1);
+        case #char "}"; return make_token(lexer, .R_BRACE,   1);
+        case #char "="; return make_token(lexer, .EQUAL,     1);
         case #char ">"; if peek(lexer, 1) == {
             case #char "="; return make_token(lexer, .GREATER_OR_EQUAL, 2);
             case;           return make_token(lexer, .GREATER,          1);
