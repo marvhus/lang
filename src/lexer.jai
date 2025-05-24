@@ -20,8 +20,9 @@ Token :: struct {
         L_BRACE;
         R_BRACE;
 
-        IDENT;
-        INT_LITERAL;
+        IDENTIFIER;
+        INTEGER_LITERAL;
+        STRING_LITERAL;
     }
 
     kind:   Kind;
@@ -46,12 +47,14 @@ tokenize :: (text: string) -> [..]Token {
     return tokens;
 }
 
-dump :: (tokens: []Token) {
+// TODO(mvh): Handle the content other than passing it to the function. Maybe eventually when we need to
+//            handle more files, we should use whatever mechanism that then handles the multiple files.
+dump :: (tokens: []Token, content: string) {
     push_context,defer_pop;
     context.print_style.default_format_struct.use_long_form_if_more_than_this_many_members = -1;
 
     print("Token.[\n");
-    for tok: tokenize(content) {
+    for tok: tokens {
         slice := string.{
             data  = content.data + tok.offset,
             count = tok.length,
@@ -142,7 +145,7 @@ next_token :: (lexer: *Lexer) -> Token {
             }
         }
         return Token.{
-            kind   = .INT_LITERAL,
+            kind   = .INTEGER_LITERAL,
             offset  = start,
             length = lexer.cursor - start,
         };
@@ -163,9 +166,26 @@ next_token :: (lexer: *Lexer) -> Token {
             break;
         }
         return Token.{
-            kind   = .IDENT,
-            offset  = start,
+            kind   = .IDENTIFIER,
+            offset = start,
             length = lexer.cursor - start,
+        };
+    }
+
+    if char == #char "\"" { // String
+        start := lexer.cursor;
+        while true {
+            char := next(lexer);
+            if char == #char "\"" {
+                break;
+            }
+        }
+        next(lexer);
+
+        return Token.{
+            kind   = .STRING_LITERAL,
+            offset = start + 1,
+            length = lexer.cursor - start - 2,
         };
     }
 

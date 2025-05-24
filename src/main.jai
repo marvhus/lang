@@ -1,15 +1,14 @@
-content :: #string DONE
+CONTENT :: #string DONE
 <- + - * /
 = < <= > >=
 ( ) { }
 hello_w0rld 123
+"hello world"
 DONE;
 
 main :: () {
-    print("Lexing:\n%\n", content);
-
-    tokens := tokenize(content);
-    dump(tokens);
+    tokens := tokenize(CONTENT);
+    dump(tokens, CONTENT);
 }
 
 #load "lexer.jai";
