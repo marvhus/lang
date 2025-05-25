@@ -351,14 +351,33 @@ parse_increasing_precedence :: (using parser: *Parser, left: *AST_Node, min_prec
     return binop;
 }
 
-// TODO(mvh): Handle more than just number.  Maybe rename AST_Value to AST_Leaf or something like it?
+// TODO(mvh): Handle more than just number.
 parse_leaf :: (using parser: *Parser) -> *AST_Node {
-    value := New(AST_Leaf);
-    value.kind = .LEAF;
+    token := peek(parser);
 
-    integer := expect(parser, .INTEGER_LITERAL);
-    slice := get_string_slice(integer, content);
-    value.number = parse_int(*slice, int);
+    if token.kind == {
+      case .L_PAREN;
+        next(parser);
 
-    return value;
+        node := parse_expression(parser);
+        expect(parser, .R_PAREN);
+
+        return node;
+
+      case .INTEGER_LITERAL;
+        next(parser);
+        slice := get_string_slice(token, content);
+
+        leaf := New(AST_Leaf);
+        leaf.kind = .LEAF;
+        leaf.number = parse_int(*slice, int);
+
+        return leaf;
+    }
+
+    log_error("Unexpected token in leaf.\n");
+    exit(1);
+
+
+    return null;
 }
