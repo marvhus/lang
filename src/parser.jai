@@ -80,27 +80,34 @@ dump :: (root: *AST_Node) {
         for 1..indent print("  ");
     }
     dump :: (node: *AST_Node, indent: u64) {
-        print_indent(indent);
         if node.kind == {
           case .ROOT;      root := node.(*AST_Root);
-            print("root:\n");
-            for root.statements dump(it, indent + 1);
+            for root.statements dump(it, indent);
 
           case .PROCEDURE; proc := node.(*AST_Procedure);
+            print_indent(indent);
             print("proc %()\n", proc.name);
-            dump(proc.block, indent + 1);
+            dump(proc.block, indent);
 
           case .BLOCK;     block := node.(*AST_Block);
-            print("block:\n");
+            print_indent(indent);
+            print("{\n");
             for block.statements dump(it, indent + 1);
+            print_indent(indent);
+            print("}\n");
 
           case .ASSIGN;    assign := node.(*AST_Assign);
-            print("`%` %<-\n",
+            print_indent(indent);
+            print("%1%2 <-\n",
                 assign.name,
-                ifx assign.define then ": " else "");
+                ifx assign.define
+                    then ":"
+                    else ""
+            );
             dump(assign.value, indent + 1);
 
           case .CALL;      call := node.(*AST_Call);
+            print_indent(indent);
             print("%(\n", call.name);
             for call.parameters {
                 dump(it, indent + 1);
@@ -113,6 +120,7 @@ dump :: (root: *AST_Node) {
             print(")\n");
 
           case .BINOP;     binop := node.(*AST_Binop);
+            print_indent(indent);
             if binop.operation == {
               case .ADD; print("+");
               case .SUB; print("-");
@@ -125,6 +133,7 @@ dump :: (root: *AST_Node) {
             if binop.right dump(binop.right, indent + 1);
 
           case .LEAF;     leaf := node.(*AST_Leaf);
+            print_indent(indent);
             print("%\n", leaf.number);
         }
     }
