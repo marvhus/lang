@@ -61,17 +61,15 @@ dump :: (tokens: []Token, content: string) {
     push_context,defer_pop;
     context.print_style.default_format_struct.use_long_form_if_more_than_this_many_members = -1;
 
-    print("Token.[\n");
     for tok: tokens {
         slice := string.{
             data  = content.data + tok.offset,
             count = tok.length,
         };
 
-        print("\t// `%`\n", slice);
-        print("\t.%,\n", tok);
+        print("`%`\t", slice);
+        print("%\n", tok);
     }
-    print("];\n");
 }
 
 get_string_slice :: (token: Token, content: string) -> string {
