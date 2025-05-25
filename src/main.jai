@@ -2,7 +2,7 @@ CONTENT :: #string DONE
 proc main() {
     a :<- 1;
     a <- 2;
-    exit(1, 2 * 3 + 1);
+    exit(2 / 1 + 2 * 3, 2 * 3 + 1);
 }
 DONE;
 

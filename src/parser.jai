@@ -300,32 +300,59 @@ parse_assign :: (using parser: *Parser) -> *AST_Assign {
     return assign;
 }
 
-// TODO(mvh): Parenthesis and precedence.
-parse_expression :: (using parser: *Parser) -> *AST_Node {
-    is_binop :: (kind: Token.Kind) -> bool {
-        return kind == .ADD
-            || kind == .SUB
-            || kind == .MUL
-            || kind == .DIV;
-    }
-
+parse_expression :: (using parser: *Parser, min_prec := 0) -> *AST_Node {
     left := parse_leaf(parser);
 
-    if is_binop(peek(parser).kind) {
-        expression := New(AST_Binop);
-        expression.kind      = .BINOP;
-        expression.operation = peek(parser).kind;
-        next(parser);
-        expression.left      = left;
-        expression.right     = parse_expression(parser);
-        return expression;
+    while true {
+        node := parse_increasing_precedence(parser, left, min_prec);
+        if node == left then break;
+
+        left = node;
     }
 
     return left;
 }
 
+parse_increasing_precedence :: (using parser: *Parser, left: *AST_Node, min_prec: int) -> *AST_Node {
+    is_binary_operator :: (kind: Token.Kind) -> bool {
+        return kind == .ADD
+            || kind == .SUB
+            || kind == .MUL
+            || kind == .DIV;
+    }
+    get_precedence :: (kind: Token.Kind) -> int {
+        if kind == {
+          case .ADD; #through;
+          case .SUB;
+            return 1;
+          case .MUL; #through;
+          case .DIV;
+            return 2;
+        }
+        assert(false, "Unable to get precidence for something that isn't an operator.");
+        return 0;
+    }
+
+    token := peek(parser);
+    if !is_binary_operator(token.kind) then return left;
+    next_prec := get_precedence(token.kind);
+
+    if next_prec <= min_prec {
+        return left;
+    }
+
+    next(parser);
+
+    binop := New(AST_Binop);
+    binop.kind = .BINOP;
+    binop.operation = token.kind;
+    binop.left = left;
+    binop.right = parse_expression(parser, next_prec);
+    return binop;
+}
+
 // TODO(mvh): Handle more than just number.  Maybe rename AST_Value to AST_Leaf or something like it?
-parse_leaf :: (using parser: *Parser) -> *AST_Leaf {
+parse_leaf :: (using parser: *Parser) -> *AST_Node {
     value := New(AST_Leaf);
     value.kind = .LEAF;
 
