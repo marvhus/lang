@@ -16,6 +16,8 @@ Token :: struct {
 
         COLON;
         SEMICOLON;
+        COMMA;
+        PERIOD;
 
         L_PAREN;
         R_PAREN;
@@ -135,6 +137,8 @@ next_token :: (lexer: *Lexer) -> Token {
         case #char "/"; return make_token(lexer, .DIV,       1);
         case #char ":"; return make_token(lexer, .COLON,     1);
         case #char ";"; return make_token(lexer, .SEMICOLON, 1);
+        case #char ","; return make_token(lexer, .COMMA,     1);
+        case #char "."; return make_token(lexer, .PERIOD,    1);
         case #char "("; return make_token(lexer, .L_PAREN,   1);
         case #char ")"; return make_token(lexer, .R_PAREN,   1);
         case #char "{"; return make_token(lexer, .L_BRACE,   1);

@@ -1,13 +1,19 @@
 CONTENT :: #string DONE
 proc main() {
-    a := 1;
-    b := 2;
-    exit(1);
+    a :<- 1;
+    b :<- 2;
+    exit(1, 2 * 3 + 1);
 }
 DONE;
 
 main :: () {
+    print("- Input:\n%", CONTENT);
+
+    print("- Tokenizing:\n");
     tokens := tokenize(CONTENT);
+    dump(tokens, CONTENT);
+
+    print("- Parsing:\n");
     root := parse(tokens, CONTENT);
     print("root %\n", root.kind);
     for root.(*AST_Root).statements {
@@ -25,6 +31,17 @@ main :: () {
                   case .CALL;
                     call := it.(*AST_Call);
                     print("        call `%`\n", call.name);
+                    for call.parameters {
+                        print("          parameter `%`\n", it.kind);
+                        if it.kind == {
+                          case .BINOP;
+                            binop := it.(*AST_Binop);
+                            print("            operation `%`\n", binop.operation);
+                          case .LEAF;
+                            leaf := it.(*AST_Leaf);
+                            print("            leaf `%`\n", leaf.number);
+                        }
+                    }
                 }
             }
         }

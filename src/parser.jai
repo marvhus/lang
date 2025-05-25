@@ -6,8 +6,8 @@ AST_Node :: struct {
         BLOCK;
         ASSIGN;
         CALL;
-        EXPRESSION;
-        VALUE;
+        BINOP;
+        LEAF;
     };
 
     kind: Kind;
@@ -35,27 +35,22 @@ AST_Assign :: struct {
     using #as base: AST_Node;
     name: string;
     define: bool;
-    value: *AST_Expression;
+    value: *AST_Node;
 }
 
 AST_Call :: struct {
     using #as base: AST_Node;
     name: string;
-    parameters: [..]*AST_Expression;
+    parameters: [..]*AST_Node;
 }
 
-AST_Expression :: struct {
-    Thing :: enum { // TODO(mvh): Name this better?
-        INVALID :: 0;
-        VALUE;
-    };
-
+AST_Binop :: struct {
     using #as base: AST_Node;
-    thing: Thing;
-    next: *AST_Node;
+    operation: Token.Kind;
+    left, right: *AST_Node;
 }
 
-AST_Value :: struct {
+AST_Leaf :: struct {
     using #as base: AST_Node;
     number: int;
 }
@@ -199,8 +194,14 @@ parse_call :: (using parser: *Parser) -> *AST_Call {
     expect(parser, .L_PAREN);
 
     // TODO(mvh): Handle more than one parameter
-    parameters: [..]*AST_Expression;
-    array_add(*parameters, parse_expression(parser));
+    parameters: [..]*AST_Node;
+    while peek(parser).kind != .R_PAREN {
+        token := parse_expression(parser);
+        array_add(*parameters, token);
+        if peek(parser).kind == .COMMA {
+            next(parser);
+        }
+    }
     call.parameters = parameters;
 
     expect(parser, .R_PAREN);
@@ -224,7 +225,7 @@ parse_assign :: (using parser: *Parser) -> *AST_Assign {
         // TODO(mvh): Handle types;
     }
 
-    expect(parser, .EQUAL);
+    expect(parser, .SET);
 
     assign.value = parse_expression(parser);
 
@@ -233,28 +234,34 @@ parse_assign :: (using parser: *Parser) -> *AST_Assign {
     return assign;
 }
 
-// TODO(mvh): Propper expression parsing.
-parse_expression :: (using parser: *Parser) -> *AST_Expression {
-    expression := New(AST_Expression);
-    expression.kind = .EXPRESSION;
-
-    token := peek(parser);
-    if token.kind == {
-      case .INTEGER_LITERAL;
-        expression.thing = .VALUE;
-        expression.next = parse_value(parser);
-      case;
-        log_error("Syntax error.  Unexpected token in expression %\n", token.kind);
-        exit(1);
+// TODO(mvh): Parenthesis and precedence.
+parse_expression :: (using parser: *Parser) -> *AST_Node {
+    is_binop :: (kind: Token.Kind) -> bool {
+        return kind == .ADD
+            || kind == .SUB
+            || kind == .MUL
+            || kind == .DIV;
     }
 
-    return expression;
+    left := parse_leaf(parser);
+
+    if is_binop(peek(parser).kind) {
+        expression := New(AST_Binop);
+        expression.kind      = .BINOP;
+        expression.operation = peek(parser).kind;
+        next(parser);
+        expression.left      = left;
+        expression.right     = parse_expression(parser);
+        return expression;
+    }
+
+    return left;
 }
 
 // TODO(mvh): Handle more than just number.  Maybe rename AST_Value to AST_Leaf or something like it?
-parse_value :: (using parser: *Parser) -> *AST_Value {
-    value := New(AST_Value);
-    value.kind = .VALUE;
+parse_leaf :: (using parser: *Parser) -> *AST_Leaf {
+    value := New(AST_Leaf);
+    value.kind = .LEAF;
 
     integer := expect(parser, .INTEGER_LITERAL);
     slice := get_string_slice(integer, content);
