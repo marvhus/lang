@@ -14,7 +14,7 @@ $ bin/lang
 proc main() {
     a :<- 1;
     a <- 2;
-    exit(1, 2 * 3 + 1);
+    exit(2 / (1 + 2) * 3, 2 * 3 + 1);
 }
 - Tokenizing:
 `proc`	{kind = KEYWORD_PROC; offset = 0; length = 4; }
@@ -33,32 +33,32 @@ proc main() {
 `;`	{kind = SEMICOLON; offset = 37; length = 1; }
 `exit`	{kind = IDENTIFIER; offset = 43; length = 4; }
 `(`	{kind = L_PAREN; offset = 47; length = 1; }
-`1`	{kind = INTEGER_LITERAL; offset = 48; length = 1; }
-`,`	{kind = COMMA; offset = 49; length = 1; }
-`2`	{kind = INTEGER_LITERAL; offset = 51; length = 1; }
-`*`	{kind = MUL; offset = 53; length = 1; }
-`3`	{kind = INTEGER_LITERAL; offset = 55; length = 1; }
-`+`	{kind = ADD; offset = 57; length = 1; }
-`1`	{kind = INTEGER_LITERAL; offset = 59; length = 1; }
-`)`	{kind = R_PAREN; offset = 60; length = 1; }
-`;`	{kind = SEMICOLON; offset = 61; length = 1; }
-`}`	{kind = R_BRACE; offset = 63; length = 1; }
-``	{kind = EOF; offset = 65; length = 0; }
+`2`	{kind = INTEGER_LITERAL; offset = 48; length = 1; }
+`/`	{kind = DIV; offset = 50; length = 1; }
+`(`	{kind = L_PAREN; offset = 52; length = 1; }
+`1`	{kind = INTEGER_LITERAL; offset = 53; length = 1; }
+`+`	{kind = ADD; offset = 55; length = 1; }
+`2`	{kind = INTEGER_LITERAL; offset = 57; length = 1; }
+`)`	{kind = R_PAREN; offset = 58; length = 1; }
+`*`	{kind = MUL; offset = 60; length = 1; }
+`3`	{kind = INTEGER_LITERAL; offset = 62; length = 1; }
+`,`	{kind = COMMA; offset = 63; length = 1; }
+`2`	{kind = INTEGER_LITERAL; offset = 65; length = 1; }
+`*`	{kind = MUL; offset = 67; length = 1; }
+`3`	{kind = INTEGER_LITERAL; offset = 69; length = 1; }
+`+`	{kind = ADD; offset = 71; length = 1; }
+`1`	{kind = INTEGER_LITERAL; offset = 73; length = 1; }
+`)`	{kind = R_PAREN; offset = 74; length = 1; }
+`;`	{kind = SEMICOLON; offset = 75; length = 1; }
+`}`	{kind = R_BRACE; offset = 77; length = 1; }
+``	{kind = EOF; offset = 79; length = 0; }
 - Parsing:
-proc main()
-{
-  a: <-
-    1
-  a <-
-    2
+proc main() {
+  a: <- 1
+  a <- 2
   exit(
-    1
-    ,
-    *
-      2
-      +
-        3
-        1
+    (* (/ 2 (+ 1 2)) 3),
+    (+ (* 2 3) 1)
   )
 }
 ```
