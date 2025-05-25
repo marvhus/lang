@@ -75,6 +75,62 @@ parse :: (tokens: []Token, content: string) -> root_node: *AST_Root {
     return root;
 }
 
+dump :: (root: *AST_Node) {
+    print_indent :: (indent: u64) {
+        for 0..indent print("  ");
+    }
+    dump :: (node: *AST_Node, indent: u64) {
+        print_indent(indent);
+        if node.kind == {
+          case .ROOT;      root := node.(*AST_Root);
+            print("root:\n");
+            for root.statements dump(it, indent + 1);
+
+          case .PROCEDURE; proc := node.(*AST_Procedure);
+            print("proc %()\n", proc.name);
+            dump(proc.block, indent + 1);
+
+          case .BLOCK;     block := node.(*AST_Block);
+            print("block:\n");
+            for block.statements dump(it, indent + 1);
+
+          case .ASSIGN;    assign := node.(*AST_Assign);
+            print("`%` %<-\n",
+                assign.name,
+                ifx assign.define then ": " else "");
+            dump(assign.value, indent + 1);
+
+          case .CALL;      call := node.(*AST_Call);
+            print("%(\n", call.name);
+            for call.parameters {
+                dump(it, indent + 1);
+                if it_index < call.parameters.count - 1 {
+                    print_indent(indent + 1);
+                    print(",\n");
+                }
+            }
+            print_indent(indent);
+            print(")\n");
+
+          case .BINOP;     binop := node.(*AST_Binop);
+            if binop.operation == {
+              case .ADD; print("+");
+              case .SUB; print("-");
+              case .MUL; print("*");
+              case .DIV; print("/");
+              case; log_error("Invalid binop %\n", binop.operation); exit(1);
+            }
+            print("\n");
+            if binop.left  dump(binop.left , indent + 1);
+            if binop.right dump(binop.right, indent + 1);
+
+          case .LEAF;     leaf := node.(*AST_Leaf);
+            print("%\n", leaf.number);
+        }
+    }
+    dump(root, 0);
+}
+
 #scope_file
 
 Parser :: struct {
@@ -118,7 +174,8 @@ parse_statement :: (using parser: *Parser, is_root: bool) -> success: bool, node
         if peek(parser, 1).kind == {
           case .L_PAREN;
             return true, parse_call(parser);
-          case .COLON;
+          case .COLON; #through;
+          case .SET;
             return true, parse_assign(parser);
           case;
             log_error("Syntax error.  Unexpected token after identifier.\n");
