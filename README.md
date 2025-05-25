@@ -45,20 +45,20 @@ proc main() {
 `}`	{kind = R_BRACE; offset = 63; length = 1; }
 ``	{kind = EOF; offset = 65; length = 0; }
 - Parsing:
-  root:
-    proc main()
-      block:
-        `a` : <-
-          1
-        `a` <-
+root:
+  proc main()
+    block:
+      `a` : <-
+        1
+      `a` <-
+        2
+      exit(
+        1
+        ,
+        *
           2
-        exit(
-          1
-          ,
-          *
-            2
-            +
-              3
-              1
-        )
+          +
+            3
+            1
+      )
 ```

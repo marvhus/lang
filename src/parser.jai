@@ -77,7 +77,7 @@ parse :: (tokens: []Token, content: string) -> root_node: *AST_Root {
 
 dump :: (root: *AST_Node) {
     print_indent :: (indent: u64) {
-        for 0..indent print("  ");
+        for 1..indent print("  ");
     }
     dump :: (node: *AST_Node, indent: u64) {
         print_indent(indent);
