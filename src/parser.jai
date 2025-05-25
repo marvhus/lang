@@ -79,48 +79,56 @@ dump :: (root: *AST_Node) {
     print_indent :: (indent: u64) {
         for 1..indent print("  ");
     }
-    dump :: (node: *AST_Node, indent: u64) {
+    dump :: (node: *AST_Node, indent: u64, end_with_newline := true, indent_line := true) {
         if node.kind == {
           case .ROOT;      root := node.(*AST_Root);
             for root.statements dump(it, indent);
 
           case .PROCEDURE; proc := node.(*AST_Procedure);
-            print_indent(indent);
-            print("proc %()\n", proc.name);
-            dump(proc.block, indent);
+            if indent_line print_indent(indent);
+            print("proc %() {\n", proc.name);
+            assert(proc.block != null, "A procedure should have a body");
+            for proc.block.(*AST_Block).statements {
+                dump(it, indent + 1, end_with_newline, indent_line);
+            }
+            print("}");
+            if end_with_newline print("\n");
 
           case .BLOCK;     block := node.(*AST_Block);
-            print_indent(indent);
+            if indent_line print_indent(indent);
             print("{\n");
             for block.statements dump(it, indent + 1);
             print_indent(indent);
-            print("}\n");
+            print("}");
+            if end_with_newline then print("\n");
 
           case .ASSIGN;    assign := node.(*AST_Assign);
-            print_indent(indent);
-            print("%1%2 <-\n",
+            if indent_line print_indent(indent);
+            print("%1%2 <- ",
                 assign.name,
                 ifx assign.define
                     then ":"
                     else ""
             );
-            dump(assign.value, indent + 1);
+            dump(assign.value, indent + 1, false, false);
+            if end_with_newline print("\n");
 
           case .CALL;      call := node.(*AST_Call);
-            print_indent(indent);
+            if indent_line print_indent(indent);
             print("%(\n", call.name);
             for call.parameters {
-                dump(it, indent + 1);
-                if it_index < call.parameters.count - 1 {
-                    print_indent(indent + 1);
-                    print(",\n");
-                }
+                print_indent(indent + 1);
+                dump(it, indent + 1, end_with_newline = false, indent_line = false);
+                if it_index < call.parameters.count - 1 then  print(",");
+                print("\n");
             }
             print_indent(indent);
-            print(")\n");
+            print(")");
+            if end_with_newline print("\n");
 
           case .BINOP;     binop := node.(*AST_Binop);
-            print_indent(indent);
+            if indent_line print_indent(indent);
+            if !indent_line print("(");
             if binop.operation == {
               case .ADD; print("+");
               case .SUB; print("-");
@@ -128,13 +136,17 @@ dump :: (root: *AST_Node) {
               case .DIV; print("/");
               case; log_error("Invalid binop %\n", binop.operation); exit(1);
             }
-            print("\n");
-            if binop.left  dump(binop.left , indent + 1);
-            if binop.right dump(binop.right, indent + 1);
+            if indent_line print("\n"); else print(" ");
+            if binop.left  dump(binop.left , indent + 1, false, false);
+            print(" ");
+            if binop.right dump(binop.right, indent + 1, false, false);
+            if !indent_line print(")");
+            if end_with_newline print("\n");
 
           case .LEAF;     leaf := node.(*AST_Leaf);
-            print_indent(indent);
-            print("%\n", leaf.number);
+            if indent_line print_indent(indent);
+            print("%", leaf.number);
+            if end_with_newline print("\n");
         }
     }
     dump(root, 0);
