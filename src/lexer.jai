@@ -1,6 +1,7 @@
 Token :: struct {
     Kind :: enum {
-        EOF :: 0;
+        ERROR :: 0;
+        EOF;
 
         SET;
         ADD;
@@ -46,10 +47,19 @@ tokenize :: (text: string) -> [..]Token {
 
     tokens: [..]Token;
     while true {
-        tok := next_token(*lexer);
-        array_add(*tokens, tok);
+        token := next_token(*lexer);
+        if token.kind == .ERROR {
+            char := peek(lexer, -1);
+            str := ifx char <= #char " "
+                then tprint("ascii: %", char)
+                else u8.[char].(string);
+            log_error("Unexpected character: %\n", str);
+            exit(1);
+        }
 
-        if tok.kind == .EOF then break;
+        array_add(*tokens, token);
+
+        if token.kind == .EOF then break;
     }
 
     return tokens;
@@ -87,48 +97,61 @@ Lexer :: struct {
 }
 
 peek :: (using lexer: Lexer, offset: int = 0) -> u8 {
-    if content.count - 1 - cursor < offset {
-        return 0;
-    }
+    if content.count - cursor <= offset then return 0;
     return content[cursor + offset];
 }
-next :: (using lexer: *Lexer, offset: int = 1) -> u8 {
-    if content.count - cursor < offset{
-        return 0;
-    }
 
+next :: (using lexer: *Lexer, offset: int = 0) -> u8 {
     val := peek(lexer, offset);
-    cursor += offset;
+    if val == 0 then return 0;
+
+    cursor += offset + 1;
     return val;
 }
 
-next_token :: (lexer: *Lexer) -> Token {
-    make_token :: (lexer: *Lexer, kind: Token.Kind, length: int) -> Token {
-        start := lexer.cursor;
-        next(lexer, length);
-        return Token.{
-            kind   = kind,
-            offset  = start,
-            length = length,
-        };
-    }
+make_token :: (lexer: *Lexer, kind: Token.Kind, length: int) -> Token {
+    start := lexer.cursor - 1;
+    if length > 1 then next(lexer, length - 1);
+    return Token.{
+        kind   = kind,
+        offset  = start,
+        length = length,
+    };
+}
 
-    while true { // Skip whitespace
+skip_whitespace :: (lexer: *Lexer) {
+    while true {
         char := peek(lexer);
-        if char > " " || char == 0 then break;
-
+        if char > #char " " || char == 0 then break;
         next(lexer);
     }
+}
 
-    char := peek(lexer);
+is_numeric :: inline (char: u8) -> bool {
+    return char >= #char "0"
+        && char <= #char "9";
+}
 
-    if char == 0 then return Token.{ // Check EOF
-        kind = .EOF,
-        offset = lexer.cursor,
-        length = 0,
-    };
+is_alphabetic :: inline (char: u8) -> bool {
+    upercase_mask :: ~(1 << 5);
+    upercase_char := char & upercase_mask;
+    return upercase_char >= #char "A"
+        && upercase_char <= #char "Z";
+}
 
-    if char == { // Symbols
+is_ident :: inline (char: u8) -> bool {
+    return char == #char "_"
+        || is_numeric(char)
+        || is_alphabetic(char);
+}
+
+next_token :: (lexer: *Lexer) -> Token {
+    skip_whitespace(lexer);
+
+    char := next(lexer);
+
+    if char == {
+        case 0;   return make_token(lexer, .EOF,       0);
         case "+"; return make_token(lexer, .ADD,       1);
         case "-"; return make_token(lexer, .SUB,       1);
         case "*"; return make_token(lexer, .MUL,       1);
@@ -142,53 +165,45 @@ next_token :: (lexer: *Lexer) -> Token {
         case "{"; return make_token(lexer, .L_BRACE,   1);
         case "}"; return make_token(lexer, .R_BRACE,   1);
         case "="; return make_token(lexer, .EQUAL,     1);
-        case ">"; if peek(lexer, 1) == {
+        case ">"; if peek(lexer) == {
             case "="; return make_token(lexer, .GREATER_OR_EQUAL, 2);
-            case;           return make_token(lexer, .GREATER,          1);
+            case;     return make_token(lexer, .GREATER,          1);
         }
-        case "<"; if peek(lexer, 1) == {
+        case "<"; if peek(lexer) == {
             case "-"; return make_token(lexer, .SET,           2);
             case "="; return make_token(lexer, .LESS_OR_EQUAL, 2);
-            case;           return make_token(lexer, .LESS,          1);
+            case;     return make_token(lexer, .LESS,          1);
         }
     }
 
-    if char >= "0" && char <= "9" { // Integer literals
-        start := lexer.cursor;
+    if is_numeric(char) {
+        start := lexer.cursor - 1;
         while true {
-            char := next(lexer);
-            if char < "0" || char > "9" {
-                break;
-            }
+            char := peek(lexer);
+            if !is_numeric(char) then break;
+            next(lexer);
         }
+
         return Token.{
             kind   = .INTEGER_LITERAL,
-            offset  = start,
+            offset = start,
             length = lexer.cursor - start,
         };
     }
 
-    if (char >= "a" && char <= "z")
-    || (char >= "A" && char <= "Z")
-    || (char == "_") { // Idents
-        start := lexer.cursor;
+    if is_ident(char) {
+        start := lexer.cursor - 1;
         while true {
-            char := next(lexer);
-            if (char >= "a" && char <= "z")
-            || (char >= "A" && char <= "Z")
-            || (char >= "0" && char <= "9")
-            || (char == "_") {
-                continue;
-            }
-            break;
+            char := peek(lexer);
+            if !is_ident(char) then break;
+            next(lexer);
         }
-
         slice := string.{
             data  = lexer.content.data + start,
             count = lexer.cursor - start,
         };
-        kind := Token.Kind.IDENTIFIER;
 
+        kind := Token.Kind.IDENTIFIER;
         if slice == {
           case "proc"; kind = .KEYWORD_PROC;
         }
@@ -201,14 +216,12 @@ next_token :: (lexer: *Lexer) -> Token {
     }
 
     if char == "\"" { // String
-        start := lexer.cursor;
+        start := lexer.cursor - 1;
         while true {
-            char := next(lexer);
-            if char == "\"" {
-                break;
-            }
+            char := peek(lexer);
+            if char == "\"" then break;
+            next(lexer);
         }
-        next(lexer);
 
         return Token.{
             kind   = .STRING_LITERAL,
@@ -217,7 +230,5 @@ next_token :: (lexer: *Lexer) -> Token {
         };
     }
 
-    print("Unknown token at % with char %\n", lexer.cursor, peek(lexer));
-    exit(1);
-    return Token.{kind = .EOF};
+    return Token.{kind = .ERROR};
 }
